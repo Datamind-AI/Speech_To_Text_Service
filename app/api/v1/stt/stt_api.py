@@ -12,7 +12,7 @@ class RetrieverRequest(BaseModel):
 
 
 @router.post("/stt")
-async def retriever(request_data: dict):
+async def stt(request_data: dict):
     """
     Endpoint to retriever data using the main pipeline.
 

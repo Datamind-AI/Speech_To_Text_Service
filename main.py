@@ -26,7 +26,7 @@ def index():
     Returns:
         str: A string indicating the service name and version.
     """
-    return "Retriever Service (0.1)"
+    return "STT Service (0.1)"
 
 
 if __name__ == "__main__":

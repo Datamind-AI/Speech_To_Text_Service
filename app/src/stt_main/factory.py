@@ -7,7 +7,8 @@ class STTFactory:
     # Dictionary mapping STT technique names to their respective classes
     STT_CLASSES = {
         "whisper": "app.src.stt_main.whisperSTT.whisperstt.WhisperSTT",
-        # Future additions like "deepspeech": "app.src.stt_main.deepspeechSTT.DeepSpeechSTT"
+        # Future additions like "deepspeech":
+        # "app.src.stt_main.deepspeechSTT.DeepSpeechSTT"
     }
 
     @staticmethod
@@ -30,9 +31,12 @@ class STTFactory:
 
         # Check if the STT type is registered in the factory
         if stt_type_lower in STTFactory.STT_CLASSES:
-            module_path, class_name = STTFactory.STT_CLASSES[stt_type_lower].rsplit(".", 1)
+            module_path, class_name = STTFactory.STT_CLASSES[
+                stt_type_lower
+            ].rsplit(".", 1)
         else:
-            # Dynamically import from a standard module structure if not predefined
+            # Dynamically import from a standard module structure
+            # if not predefined
             module_path = f"app.src.stt_main.{stt_type_lower}STT"
             class_name = f"{stt_type.capitalize()}STT"
 
@@ -40,7 +44,9 @@ class STTFactory:
             module = importlib.import_module(module_path)
             stt_class = getattr(module, class_name)
         except (ImportError, AttributeError) as e:
-            raise ValueError(f"STT class '{class_name}' not found in module '{module_path}'.") from e
+            raise ValueError(
+                f"STT class '{class_name}' not found in module '{module_path}'."  # noqa
+            ) from e
 
         # Instantiate the STT class with the provided audio data and metadata
         instance = stt_class(audio_data, audio_metadata)
