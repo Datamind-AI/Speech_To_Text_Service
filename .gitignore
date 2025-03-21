@@ -15,7 +15,6 @@ env/
 Pipfile
 Pipfile.lock
 poetry.lock
-requirements.txt
 
 # Logs & temp files
 *.log
