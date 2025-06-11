@@ -1,18 +1,39 @@
+import asyncio
+
 import httpx
 
 
-async def callback_task(callback_url: str, task_result):
+async def send_callback(
+    callback_url: str,
+    payload: dict,
+):
     """
-    Make a GET request to the callback URL with success or failure status.
-    """
-    try:
-        # Check if the task was successful
-        if task_result.status == "SUCCESS":
-            status = "success"
-        else:
-            status = "fail"
+    Asynchronously sends a POST request to the callback URL with a JSON
+    payload. Implements retry logic with exponential backoff for
+    production robustness.
 
-        async with httpx.AsyncClient() as client:
-            await client.get(f"{callback_url}?status={status}")
-    except Exception as e:
-        print(f"Error while calling callback: {e}")
+    Args:
+        callback_url (str): The URL to send the POST request to.
+        payload (dict): The JSON payload to send.
+    """
+    headers = {"Content-Type": "application/json"}
+    max_retries = 5
+    base_delay = 1
+
+    for attempt in range(max_retries):
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    callback_url, json=payload, headers=headers, timeout=15.0
+                )
+                response.raise_for_status()
+
+                return
+        except httpx.RequestError as e:  # noqa
+
+            if attempt < max_retries - 1:
+                delay = base_delay * (2**attempt)
+                await asyncio.sleep(delay)
+            else:
+
+                raise

@@ -8,6 +8,10 @@ import whisper
 
 from app.src.stt_main.base import BaseSTT
 
+__all__ = [
+    "WhisperSTT",
+]
+
 
 class WhisperSTT(BaseSTT):
     _models = {}
@@ -16,6 +20,7 @@ class WhisperSTT(BaseSTT):
         self,
         audio_data,
         audio_metadata,
+        **kwargs,
     ):
         """Initialize with Base64 audio data and metadata."""
         super().__init__(
@@ -36,6 +41,7 @@ class WhisperSTT(BaseSTT):
 
         # Use the already loaded model
         self.model = WhisperSTT._models[self.model_name]
+        self.kwargs = kwargs
 
     async def audio_preprocessing(self):
         """Asynchronously decode Base64 audio and save as a temporary
@@ -79,10 +85,7 @@ class WhisperSTT(BaseSTT):
                 self.model.transcribe,
                 audio_file,
             )
-            transcribed_text = result.get(
-                "text",
-                "",
-            )
+            transcribed_text = result
 
             # Cleanup: Delete temp file asynchronously after processing
             await asyncio.to_thread(
@@ -90,7 +93,10 @@ class WhisperSTT(BaseSTT):
                 audio_file,
             )
 
-            return transcribed_text
+            return {
+                "transcribed_text": transcribed_text,
+                "task_id": self.kwargs.get("task_id", None),
+            }
 
         except Exception as e:
             raise RuntimeError(f"Transcription failed: {e}")

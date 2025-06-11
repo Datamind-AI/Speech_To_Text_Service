@@ -1,11 +1,10 @@
 import logging
 
-from fastapi import APIRouter, BackgroundTasks
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.api.tasks import stt_task
 from app.src.main_driver import main
-from app.utils.callbackhandler import callback_task
 
 router = APIRouter()
 
@@ -13,54 +12,55 @@ logger = logging.getLogger(__name__)
 
 
 class STTRequest(BaseModel):
-    audio_data: str  # The base64-encoded audio input
-    callback: str = None  # Optional callback URL
+    audio_data: str
+    callback: str = None
 
     class Config:
         extra = "allow"
 
 
-@router.post("/stt")
-async def stt(request_data: STTRequest, background_tasks: BackgroundTasks):
+@router.post("/stt", summary="Transcribe Audio")
+async def stt_endpoint(request: STTRequest):
     """
-    Endpoint to transcribe audio using the STT pipeline,
-    with optional background processing via Celery and callback support.
+    Endpoint to transcribe audio using the STT pipeline.
 
-    Args:
-        request_data (STTRequest): The request body containing audio and
-                                   metadata.
-
-    Returns:
-        A message indicating task status or transcription result.
+    - **With `callback_url`**: Schedules a background task via Celery and
+                               returns a `task_id`.
+      The result will be sent to the callback URL upon completion.
+    - **Without `callback_url`**: Processes the request synchronously and
+                                  returns the transcription directly.
     """
-    if request_data.callback:
-        # Run STT in background via Celery
-        task_result = stt_task.apply_async(kwargs=request_data.dict())
+    request_dict = request.dict()
 
-        # Add background callback trigger
-        background_tasks.add_task(
-            callback_task, request_data.callback, task_result
-        )
-
-        logger.info(
-            (
-                "STT task is processing in the background, callback will "
-                "be used upon completion."
+    if request.callback_url:
+        try:
+            task = stt_task.apply_async(kwargs=request_dict)
+            return {
+                "message": (
+                    "Transcription task has been scheduled " "successfully."
+                ),
+                "task_id": task.id,
+            }
+        except Exception as e:
+            logger.error(f"Failed to schedule Celery task: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    "Internal server error: Could not "
+                    "schedule transcription task."
+                ),
             )
-        )
-
-        return {
-            "status": "STT task is processing in the background, callback will be used upon completion."  # noqa
-        }
 
     else:
         try:
-            result = await main(**request_data.dict())
-            logger.info("STT processing successful.")
+            result = await main(**request_dict)
+            logger.info("Synchronous STT processing successful.")
             return {
-                "status": "Transcription successful",
-                "text": result,
+                "status": "success",
+                "data": result,
             }
         except Exception as e:
-            logger.error("Failed to transcribe audio: %s", str(e))
-            return {"status": "Failed to transcribe", "error": str(e)}
+            logger.error(f"Failed to transcribe audio synchronously: {e}")
+            raise HTTPException(
+                status_code=500, detail=f"Failed to transcribe: {e}"
+            )

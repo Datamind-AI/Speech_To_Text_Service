@@ -1,41 +1,39 @@
 from app.src.stt_main.factory import STTFactory
 
 
-async def main(**kwargs):
+async def main(**kwargs) -> dict:
     """
-    Asynchronous main driver function to process and transcribe audio using a
-    specified STT processor.
+    Asynchronous main driver function to process and transcribe audio.
+    This function now raises exceptions on failure instead of returning
+    strings.
 
     Args:
-        **kwargs: Dictionary containing:
-            - "stt_type" (str): The STT technique to use (e.g., "whisper",
-                                "deepspeech").
-            - "audio_data" (str): Base64-encoded audio data.
-            - "audio_metadata" (dict): Metadata for the audio (e.g., sample
-                                       rate, model name).
+        **kwargs: Dictionary containing audio data and metadata.
 
     Returns:
-        str: The transcribed text.
+        dict: The transcription result dictionary.
+
+    Raises:
+        ValueError: If required parameters are missing.
+        Exception: Propagates exceptions from the STT processor.
     """
-    try:
-        stt_type = kwargs.get("stt_type", "whisper")  # Default to "whisper"
-        audio_data = kwargs.get("audio_data")
-        audio_metadata = kwargs.get("audio_metadata", {})
+    stt_type = kwargs.get("stt_type", "whisper")
+    audio_data = kwargs.get("audio_data")
 
-        if not audio_data:
-            raise ValueError("Missing audio_data in kwargs")
+    audio_metadata = {
+        k: v
+        for k, v in kwargs.items()
+        if k not in ["audio_data", "callback_url"]
+    }
 
-        # Step 1: Create an STT processor using the factory
-        stt_processor = STTFactory.create_stt_processor(
-            stt_type,
-            audio_data,
-            audio_metadata,
-        )
+    if not audio_data:
+        raise ValueError("Missing required 'audio_data' in request.")
 
-        # Step 3: Run transcription
-        transcription = await stt_processor.transcribe()
+    stt_processor = STTFactory.create_stt_processor(
+        stt_type=stt_type,
+        audio_data=audio_data,
+        audio_metadata=audio_metadata,
+    )
 
-        return transcription
-
-    except Exception as e:
-        return f"Error during STT processing: {e}"
+    result_dict = await stt_processor.transcribe()
+    return result_dict

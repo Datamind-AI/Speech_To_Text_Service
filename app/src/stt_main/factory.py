@@ -12,7 +12,12 @@ class STTFactory:
     }
 
     @staticmethod
-    def create_stt_processor(stt_type: str, audio_data, audio_metadata):
+    def create_stt_processor(
+        stt_type: str,
+        audio_data,
+        audio_metadata,
+        **kwargs,
+    ):
         """
         Factory method to create an STT processor instance.
 
@@ -49,5 +54,9 @@ class STTFactory:
             ) from e
 
         # Instantiate the STT class with the provided audio data and metadata
-        instance = stt_class(audio_data, audio_metadata)
+        instance = stt_class(
+            audio_data,
+            audio_metadata,
+            kwargs=kwargs,
+        )
         return instance
